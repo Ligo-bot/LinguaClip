@@ -216,11 +216,70 @@ class YouTubeService:
     
     async def _fetch_and_parse_subtitles(self, url: str) -> List[SubtitleSegment]:
         """Fetch subtitle content from URL and parse to segments"""
+        # YouTube captions use JSON3 format, ensure we get that
+        if '?' in url:
+            url = url.replace('fmt=srv3', 'fmt=json3').replace('fmt=srv', 'fmt=json3')
+            if 'fmt=' not in url:
+                url += '&fmt=json3'
+        else:
+            url += '?fmt=json3'
+        
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(url)
-            content = response.text
             
+            # Try JSON3 format first (YouTube's format)
+            try:
+                data = response.json()
+                return self._parse_json3_subtitles(data)
+            except Exception:
+                pass
+            
+            # Fallback to SRT/VTT format
+            content = response.text
             return self._parse_srt_content(content)
+    
+    def _parse_json3_subtitles(self, data: Dict) -> List[SubtitleSegment]:
+        """Parse YouTube JSON3 format subtitles"""
+        segments = []
+        
+        events = data.get('events', [])
+        seg_id = 0
+        
+        for event in events:
+            segs = event.get('segs', [])
+            if not segs:
+                continue
+            
+            # Get start time (in milliseconds, convert to seconds)
+            start_ms = event.get('tStartMs', 0)
+            duration_ms = event.get('dDurationMs', 0)
+            
+            start = start_ms / 1000.0
+            end = (start_ms + duration_ms) / 1000.0
+            
+            # Combine all text segments
+            text_parts = []
+            for seg in segs:
+                text = seg.get('utf8', '').strip()
+                if text:
+                    text_parts.append(text)
+            
+            text = ' '.join(text_parts).strip()
+            
+            # Remove music/sound descriptions like [Music], (applause), etc.
+            text = re.sub(r'[\[\(].*?[\]\)]', '', text).strip()
+            
+            if text:
+                segments.append(SubtitleSegment(
+                    id=seg_id,
+                    start=start,
+                    end=end,
+                    text=text,
+                    translation=None
+                ))
+                seg_id += 1
+        
+        return segments
     
     def _parse_srt_content(self, content: str) -> List[SubtitleSegment]:
         """Parse SRT/VTT format subtitle content"""
