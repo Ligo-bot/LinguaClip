@@ -235,13 +235,13 @@ export default function LearnPage() {
           </div>
         </header>
 
-        {/* Main Content */}
+        {/* Main Content - Single VideoPlayer instance */}
         <main className="flex-1 max-w-7xl mx-auto w-full p-4">
-          {/* Desktop Layout */}
-          <div className="hidden lg:block">
-            <div className="grid grid-cols-2 gap-6">
-              {/* Video Column */}
-              <div className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left Column - Video + Controls */}
+            <div className="space-y-4">
+              {/* Video Player - only rendered once */}
+              <div className="aspect-video">
                 <VideoPlayer
                   videoId={videoId}
                   currentTime={currentTime}
@@ -251,97 +251,43 @@ export default function LearnPage() {
                   onEnded={handleVideoEnded}
                   onSeekComplete={() => { seekTimeRef.current = null }}
                 />
-                
-                {/* Current subtitle display */}
-                {currentSegment && (
-                  <div className="bg-white rounded-xl shadow-lg p-4">
-                    <div className="text-center">
-                      <p className="text-xl font-medium text-gray-800 leading-relaxed">
-                        {currentSegment.text}
-                      </p>
-                      <p className="text-lg text-primary-600 mt-2 font-medium">
-                        {currentSegment.translation || '翻译中...'}
-                      </p>
-                      <p className="text-sm text-gray-400 mt-2">
-                        {formatTime(currentSegment.start)} - {formatTime(currentSegment.end)}
-                      </p>
-                    </div>
-                  </div>
-                )}
-                
-                <ControlBar
-                  currentSegmentIndex={currentSegmentIndex}
-                  totalSegments={videoInfo.subtitles.length}
-                  playbackRate={playbackRate}
-                  isLooping={isLooping}
-                  currentTime={currentTime}
-                  segmentDuration={totalDuration}
-                  onPrevious={goToPreviousSegment}
-                  onNext={goToNextSegment}
-                  onToggleLoop={toggleLoop}
-                  onPlaybackRateChange={setPlaybackRate}
-                  onSeekBackward={seekBackward}
-                  onSeekForward={seekForward}
-                />
               </div>
               
-              {/* Subtitle Column */}
-              <div className="h-[calc(100vh-200px)]">
-                <SubtitlePanel
-                  subtitles={videoInfo.subtitles}
-                  currentSegmentIndex={currentSegmentIndex}
-                  onSegmentClick={handleSegmentClick}
-                  onSegmentHover={setHoveredSegment}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Mobile Layout */}
-          <div className="lg:hidden space-y-4">
-            {/* Video */}
-            <div className="aspect-video">
-              <VideoPlayer
-                videoId={videoId}
-                currentTime={currentTime}
-                seekTime={seekTimeRef.current}
+              {/* Current subtitle display */}
+              {currentSegment && (
+                <div className="bg-white rounded-xl shadow-lg p-4">
+                  <div className="text-center">
+                    <p className="text-xl font-medium text-gray-800 leading-relaxed">
+                      {currentSegment.text}
+                    </p>
+                    <p className="text-lg text-primary-600 mt-2 font-medium">
+                      {currentSegment.translation || '翻译中...'}
+                    </p>
+                    <p className="text-sm text-gray-400 mt-2">
+                      {formatTime(currentSegment.start)} - {formatTime(currentSegment.end)}
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              <ControlBar
+                currentSegmentIndex={currentSegmentIndex}
+                totalSegments={videoInfo.subtitles.length}
                 playbackRate={playbackRate}
-                onTimeUpdate={handleTimeUpdate}
-                onEnded={handleVideoEnded}
-                onSeekComplete={() => { seekTimeRef.current = null }}
+                isLooping={isLooping}
+                currentTime={currentTime}
+                segmentDuration={totalDuration}
+                onPrevious={goToPreviousSegment}
+                onNext={goToNextSegment}
+                onToggleLoop={toggleLoop}
+                onPlaybackRateChange={setPlaybackRate}
+                onSeekBackward={seekBackward}
+                onSeekForward={seekForward}
               />
             </div>
             
-            {/* Current subtitle */}
-            {currentSegment && (
-              <div className="bg-white rounded-xl shadow-lg p-4">
-                <p className="text-lg font-medium text-gray-800 text-center">
-                  {currentSegment.text}
-                </p>
-                <p className="text-base text-primary-600 mt-2 text-center font-medium">
-                  {currentSegment.translation || '翻译中...'}
-                </p>
-              </div>
-            )}
-            
-            {/* Controls */}
-            <ControlBar
-              currentSegmentIndex={currentSegmentIndex}
-              totalSegments={videoInfo.subtitles.length}
-              playbackRate={playbackRate}
-              isLooping={isLooping}
-              currentTime={currentTime}
-              segmentDuration={totalDuration}
-              onPrevious={goToPreviousSegment}
-              onNext={goToNextSegment}
-              onToggleLoop={toggleLoop}
-              onPlaybackRateChange={setPlaybackRate}
-              onSeekBackward={seekBackward}
-              onSeekForward={seekForward}
-            />
-            
-            {/* Subtitles */}
-            <div className="h-64">
+            {/* Right Column - Subtitles */}
+            <div className="h-[500px] lg:h-[calc(100vh-200px)]">
               <SubtitlePanel
                 subtitles={videoInfo.subtitles}
                 currentSegmentIndex={currentSegmentIndex}
