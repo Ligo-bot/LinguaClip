@@ -2,6 +2,10 @@
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+// Supadata API for YouTube transcripts
+const SUPADATA_API_KEY = 'sd_47cabf6ee09c245cb9d8849702ab9ae3';
+const SUPADATA_API = 'https://api.supadata.ai/v1/youtube/transcript';
+
 // Types
 export interface SubtitleSegment {
   id: number;
@@ -46,115 +50,39 @@ export function extractVideoId(url: string): string | null {
   return null;
 }
 
-// Frontend: Fetch subtitles directly from YouTube (bypass server blocking)
-export async function fetchSubtitlesFromFrontend(videoId: string): Promise<SubtitleSegment[]> {
+// Fetch subtitles from Supadata API
+export async function fetchSubtitlesFromSupadata(videoId: string): Promise<SubtitleSegment[]> {
   try {
-    // Use a CORS proxy to fetch YouTube captions
-    const corsProxies = [
-      `https://api.allorigins.win/raw?url=`,
-      `https://corsproxy.io/?`,
-    ];
-    
-    // Try to get captions via YouTube's timedtext API
-    const captionUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&fmt=json3`;
-    
-    for (const proxy of corsProxies) {
-      try {
-        const response = await fetch(proxy + encodeURIComponent(captionUrl), {
-          headers: {
-            'Accept': 'application/json',
-          }
-        });
-        
-        if (!response.ok) continue;
-        
-        const data = await response.json();
-        const segments = parseYouTubeJson3(data);
-        
-        if (segments.length > 0) {
-          return segments;
-        }
-      } catch (e) {
-        console.log(`Proxy ${proxy} failed:`, e);
-        continue;
-      }
+    const response = await fetch(`${SUPADATA_API}?videoId=${videoId}`, {
+      method: 'GET',
+      headers: {
+        'x-api-key': SUPADATA_API_KEY,
+      },
+    });
+
+    if (!response.ok) {
+      console.error('Supadata API failed:', response.status, response.statusText);
+      return [];
     }
+
+    const data = await response.json();
     
-    // Fallback: Try auto-generated captions
-    const autoCaptionUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&kind=asr&fmt=json3`;
-    
-    for (const proxy of corsProxies) {
-      try {
-        const response = await fetch(proxy + encodeURIComponent(autoCaptionUrl), {
-          headers: {
-            'Accept': 'application/json',
-          }
-        });
-        
-        if (!response.ok) continue;
-        
-        const data = await response.json();
-        const segments = parseYouTubeJson3(data);
-        
-        if (segments.length > 0) {
-          return segments;
-        }
-      } catch (e) {
-        continue;
-      }
+    // Supadata returns content array with offset and duration in milliseconds
+    if (data.content && Array.isArray(data.content)) {
+      return data.content.map((seg: any, index: number) => ({
+        id: index,
+        start: seg.offset / 1000, // Convert ms to seconds
+        end: (seg.offset + seg.duration) / 1000,
+        text: seg.text,
+        translation: undefined,
+      }));
     }
     
     return [];
   } catch (error) {
-    console.error('Error fetching subtitles from frontend:', error);
+    console.error('Error fetching subtitles from Supadata:', error);
     return [];
   }
-}
-
-// Parse YouTube JSON3 subtitle format
-function parseYouTubeJson3(data: any): SubtitleSegment[] {
-  const segments: SubtitleSegment[] = [];
-  
-  if (!data || !data.events) return segments;
-  
-  let segId = 0;
-  
-  for (const event of data.events) {
-    const segs = event.segs;
-    if (!segs || segs.length === 0) continue;
-    
-    const startMs = event.tStartMs || 0;
-    const durationMs = event.dDurationMs || 0;
-    
-    const start = startMs / 1000.0;
-    const end = (startMs + durationMs) / 1000.0;
-    
-    // Combine all text segments
-    const textParts: string[] = [];
-    for (const seg of segs) {
-      const text = seg.utf8?.trim();
-      if (text) {
-        textParts.push(text);
-      }
-    }
-    
-    let text = textParts.join(' ').trim();
-    
-    // Remove music/sound descriptions like [Music], (applause), etc.
-    text = text.replace(/[\[\(].*?[\]\)]/g, '').trim();
-    
-    if (text) {
-      segments.push({
-        id: segId++,
-        start,
-        end,
-        text,
-        translation: undefined,
-      });
-    }
-  }
-  
-  return segments;
 }
 
 // Main API Functions
@@ -169,9 +97,6 @@ export async function parseVideo(url: string, useWhisper: boolean = false): Prom
         processing_method: 'none',
       };
     }
-    
-    // Try to fetch subtitles from frontend first (bypass server blocking)
-    const frontendSubtitles = await fetchSubtitlesFromFrontend(videoId);
     
     // Get basic video info from backend
     const response = await fetch(`${API_BASE_URL}/api/video/parse`, {
@@ -189,11 +114,13 @@ export async function parseVideo(url: string, useWhisper: boolean = false): Prom
 
     const result = await response.json();
     
-    // Use frontend subtitles if available, otherwise use backend subtitles
-    if (frontendSubtitles.length > 0) {
-      result.data.subtitles = frontendSubtitles;
+    // Fetch subtitles from Supadata API
+    const subtitles = await fetchSubtitlesFromSupadata(videoId);
+    
+    if (subtitles.length > 0) {
+      result.data.subtitles = subtitles;
       result.data.has_subtitles = true;
-      result.processing_method = 'frontend_captions';
+      result.processing_method = 'supadata_api';
     }
     
     return result;
