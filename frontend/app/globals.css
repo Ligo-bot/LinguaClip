@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --foreground-rgb: 15, 23, 42;
+  --background-rgb: 255, 255, 255;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-rgb))
+    )
+    rgb(var(--background-rgb));
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Subtitle text highlighting */
+.subtitle-segment {
+  @apply cursor-pointer transition-all duration-200;
+}
+
+.subtitle-segment:hover {
+  @apply bg-primary-100;
+}
+
+.subtitle-segment.active {
+  @apply bg-primary-200 border-l-4 border-primary-500;
+}
+
+/* Word click tooltip */
+.word-tooltip {
+  @apply absolute z-50 bg-white shadow-xl rounded-lg p-3 min-w-48 max-w-xs;
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Video player responsive */
+.video-container {
+  @apply relative w-full overflow-hidden rounded-xl shadow-lg;
+  background: #000;
+}
+
+.video-container::before {
+  content: '';
+  display: block;
+  padding-top: 56.25%; /* 16:9 aspect ratio */
+}
+
+.video-container iframe,
+.video-container video {
+  @apply absolute top-0 left-0 w-full h-full;
+}
+
+/* Loading spinner */
+.spinner {
+  @apply animate-spin rounded-full border-2 border-primary-200 border-t-primary-600;
+}
+
+/* Control bar buttons */
+.control-btn {
+  @apply p-2 rounded-lg transition-colors duration-200;
+  @apply hover:bg-gray-100 active:bg-gray-200;
+}
+
+.control-btn.active {
+  @apply bg-primary-100 text-primary-600;
+}
+
+/* Input focus states */
+input:focus {
+  @apply outline-none ring-2 ring-primary-500 ring-opacity-50;
+}
+
+/* Glass effect for panels */
+.glass-panel {
+  @apply bg-white/80 backdrop-blur-sm;
+}
